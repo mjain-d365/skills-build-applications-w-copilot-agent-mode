@@ -9,7 +9,7 @@ import { Team }        from './models/Team'
 import { Leaderboard } from './models/Leaderboard'
 import { WorkoutPlan } from './models/WorkoutPlan'
 
-const MONGO_URI = 'mongodb://localhost:27017/octofit'
+const MONGO_URI = process.env.MONGO_URI ?? 'mongodb://localhost:27017/octofit_db'
 
 async function seed() {
   await mongoose.connect(MONGO_URI)
