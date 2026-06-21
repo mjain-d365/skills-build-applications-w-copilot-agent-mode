@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 
-import { connectDb, dbStatus } from './db/connection'
+import { connectDb, dbStatus } from './database'
 import userRoutes          from './routes/users'
 import activityRoutes      from './routes/activities'
 import leaderboardRoutes   from './routes/leaderboard'
