@@ -1,26 +1,25 @@
 import express from 'express'
 import cors from 'cors'
-import mongoose from 'mongoose'
 
-import userRoutes       from './routes/users'
-import activityRoutes  from './routes/activities'
-import leaderboardRoutes from './routes/leaderboard'
-import teamRoutes      from './routes/teams'
-import workoutRoutes   from './routes/workoutPlans'
+import { connectDb, dbStatus } from './db/connection'
+import userRoutes          from './routes/users'
+import activityRoutes      from './routes/activities'
+import leaderboardRoutes   from './routes/leaderboard'
+import teamRoutes          from './routes/teams'
+import workoutRoutes       from './routes/workoutPlans'
 
-const app = express()
-const PORT = 8000
-const MONGO_URI = 'mongodb://localhost:27017/octofit'
+const app  = express()
+const PORT = Number(process.env.PORT) || 8000
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173' }))
+app.use(cors({ origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173' }))
 app.use(express.json())
 
-// MongoDB connection
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB on port 27017'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err))
+// Connect to MongoDB
+connectDb().catch((err) => {
+  console.error('Failed to connect to MongoDB:', err)
+  process.exit(1)
+})
 
 // Routes
 app.use('/api/users',         userRoutes)
@@ -31,7 +30,11 @@ app.use('/api/workout-plans', workoutRoutes)
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'OctoFit Tracker API is running' })
+  res.json({
+    status: 'ok',
+    message: 'OctoFit Tracker API is running',
+    db: dbStatus(),
+  })
 })
 
 // Start server
