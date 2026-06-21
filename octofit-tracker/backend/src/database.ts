@@ -3,23 +3,20 @@
  * Robust Mongoose connection module for OctoFit Tracker.
  *
  * Fixes over the original connection.ts:
- *  1. isConnected flag is set immediately after await mongoose.connect()
- *     (not relying solely on the async 'connected' event).
- *  2. Event listeners are registered only once via .once() to prevent
+ *  1. Event listeners are registered only once via .once() to prevent
  *     duplicate handlers on repeated calls.
- *  3. bufferCommands disabled so queries fail fast instead of queuing
+ *  2. bufferCommands disabled so queries fail fast instead of queuing
  *     silently when MongoDB is unreachable.
- *  4. Graceful shutdown helpers exported for process signals.
+ *  3. Graceful shutdown helpers exported for process signals.
  */
 import mongoose from 'mongoose'
 
 export const MONGO_URI =
-  process.env.MONGO_URI ?? 'mongodb://localhost:27017/octofit'
+  process.env.MONGO_URI ?? 'mongodb://localhost:27017/octofit_db'
 
 // Disable silent query buffering — fail fast if not connected
 mongoose.set('bufferCommands', false)
 
-let _connected = false
 let _listenersRegistered = false
 
 function registerListeners(): void {
@@ -27,22 +24,18 @@ function registerListeners(): void {
   _listenersRegistered = true
 
   mongoose.connection.once('connected', () => {
-    _connected = true
-    console.log('✅ MongoDB connected — octofit @ ' + MONGO_URI)
+    console.log('✅ MongoDB connected — octofit_db @ ' + MONGO_URI)
   })
 
   mongoose.connection.once('disconnected', () => {
-    _connected = false
     console.warn('⚠️  MongoDB disconnected')
   })
 
   mongoose.connection.on('reconnected', () => {
-    _connected = true
     console.log('🔄 MongoDB reconnected')
   })
 
   mongoose.connection.on('error', (err: Error) => {
-    _connected = false
     console.error('❌ MongoDB error:', err.message)
   })
 }
@@ -60,9 +53,6 @@ export async function connectDb(): Promise<void> {
   await mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 5000, // fail fast if Mongo unreachable
   })
-
-  // Set flag synchronously after the promise resolves
-  _connected = true
 }
 
 /**
@@ -80,12 +70,9 @@ export function dbStatus(): 'connected' | 'disconnected' {
 export async function disconnectDb(): Promise<void> {
   if (mongoose.connection.readyState === 0) return
   await mongoose.disconnect()
-  _connected = false
   console.log('🛑 MongoDB connection closed')
 }
 
 // Auto-close on process termination
-process.on('SIGINT',  () => disconnectDb().then(() => process.exit(0)))
+process.on('SIGINT', () => disconnectDb().then(() => process.exit(0)))
 process.on('SIGTERM', () => disconnectDb().then(() => process.exit(0)))
-
-export { _connected as isConnected }
